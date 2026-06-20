@@ -1,0 +1,67 @@
+# ============================================================================
+#  systemd unit for the trading dashboard (Next.js standalone build).
+#
+#  Runs as a dedicated, unprivileged `dashboard` user — SEPARATE from the bot's
+#  user. It has NO access to the bot's .env (Alpaca keys) and connects to
+#  Postgres only as the read-only `dashboard_ro` role.
+#
+#  One-time setup on the VPS:
+#     sudo useradd --system --create-home --shell /usr/sbin/nologin dashboard
+#     sudo mkdir -p /opt/dashboard /etc/dashboard
+#     # rsync the standalone artifact (see .github/workflows + README) into /opt/dashboard
+#     sudo chown -R dashboard:dashboard /opt/dashboard
+#     sudo install -o dashboard -g dashboard -m 0600 dashboard.env /etc/dashboard/dashboard.env
+#     sudo cp dashboard.service /etc/systemd/system/
+#     sudo systemctl daemon-reload && sudo systemctl enable --now dashboard
+#
+#  Layout expected in /opt/dashboard:  server.js, .next/, node_modules/, public/
+# ============================================================================
+[Unit]
+Description=Algo Trading Dashboard (Next.js)
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dashboard
+Group=dashboard
+WorkingDirectory=/opt/dashboard
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+# Bind to localhost only — Caddy/Nginx terminates TLS and proxies to this.
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+# Secrets (DATABASE_URL=dashboard_ro, AUTH_SECRET, ADMIN_*, TOTP_*) live here,
+# readable only by the dashboard user (0600). NEVER the bot's .env.
+EnvironmentFile=/etc/dashboard/dashboard.env
+
+# ── Sandboxing / hardening ───────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# Note: do NOT set MemoryDenyWriteExecute=true — V8/Node's JIT needs W^X memory.
+# The app is fully dynamic (no ISR), so it needs no writable paths; /tmp is
+# provided privately. If you ever enable ISR/fetch-cache, add:
+#   ReadWritePaths=/opt/dashboard/.next/cache
+
+[Install]
+WantedBy=multi-user.target

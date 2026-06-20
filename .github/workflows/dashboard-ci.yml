@@ -1,0 +1,84 @@
+name: Dashboard CI
+
+# Build + package the dashboard OFF the production VPS. The VPS only ever
+# receives the final standalone artifact (see infra/systemd/dashboard.service).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/dashboard/**"
+      - ".github/workflows/dashboard-ci.yml"
+  pull_request:
+    paths:
+      - "apps/dashboard/**"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/dashboard
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (standalone)
+        run: npm run build
+        env:
+          # Present-but-placeholder: pages are dynamic, so no DB is hit at build
+          # time; the postgres client connects lazily at request time only.
+          DATABASE_URL: postgres://placeholder:placeholder@127.0.0.1:5432/placeholder
+          AUTH_SECRET: build-time-placeholder-not-used-at-runtime-000000
+
+      - name: Package standalone artifact
+        run: |
+          set -e
+          OUT="$RUNNER_TEMP/dashboard"
+          mkdir -p "$OUT"
+          cp -r .next/standalone/. "$OUT"/
+          mkdir -p "$OUT/.next/static"
+          cp -r .next/static/. "$OUT/.next/static"/
+          [ -d public ] && cp -r public "$OUT"/public || true
+          tar czf "$RUNNER_TEMP/dashboard-standalone.tgz" -C "$OUT" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-standalone
+          path: ${{ runner.temp }}/dashboard-standalone.tgz
+          retention-days: 14
+
+  # ── Optional deploy job (uncomment + add secrets to enable) ────────────────
+  # deploy:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with: { name: dashboard-standalone }
+  #     - name: Ship to VPS and restart
+  #       run: |
+  #         echo "${{ secrets.VPS_SSH_KEY }}" > key && chmod 600 key
+  #         scp -i key -o StrictHostKeyChecking=accept-new dashboard-standalone.tgz \
+  #             deploy@${{ secrets.VPS_HOST }}:/tmp/
+  #         ssh -i key deploy@${{ secrets.VPS_HOST }} '
+  #           sudo systemctl stop dashboard &&
+  #           sudo rm -rf /opt/dashboard/* &&
+  #           sudo tar xzf /tmp/dashboard-standalone.tgz -C /opt/dashboard &&
+  #           sudo chown -R dashboard:dashboard /opt/dashboard &&
+  #           sudo systemctl start dashboard'

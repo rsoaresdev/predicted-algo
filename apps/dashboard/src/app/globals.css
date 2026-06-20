@@ -1,0 +1,290 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* shadcn-style dark variant: `dark:` applies when a `.dark` ancestor exists. */
+@custom-variant dark (&:is(.dark *));
+
+/* ──────────────────────────────────────────────────────────────────────────
+   "Command center" fintech theme. Dark is the product default.
+   Deep blue-black canvas + ambient violet glow, glassy surfaces, emerald/rose
+   reserved strictly for P&L. Not Tailwind defaults.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --radius: 0.875rem;
+
+  /* Light theme (available via toggle; not the default). */
+  --background: oklch(0.985 0.003 264);
+  --foreground: oklch(0.17 0.014 270);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.014 270);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.014 270);
+  --primary: oklch(0.54 0.2 280);
+  --primary-foreground: oklch(0.99 0.01 280);
+  --secondary: oklch(0.96 0.006 270);
+  --secondary-foreground: oklch(0.22 0.012 270);
+  --muted: oklch(0.96 0.006 270);
+  --muted-foreground: oklch(0.5 0.014 270);
+  --accent: oklch(0.95 0.012 280);
+  --accent-foreground: oklch(0.22 0.012 270);
+  --destructive: oklch(0.58 0.22 18);
+  --border: oklch(0.9 0.006 270);
+  --input: oklch(0.9 0.006 270);
+  --ring: oklch(0.54 0.2 280);
+
+  --gain: oklch(0.62 0.16 158);
+  --gain-foreground: oklch(0.99 0.02 158);
+  --loss: oklch(0.57 0.22 18);
+  --loss-foreground: oklch(0.99 0.02 18);
+
+  --chart-1: oklch(0.54 0.2 280);
+  --chart-2: oklch(0.6 0.14 210);
+  --chart-3: oklch(0.62 0.16 158);
+  --chart-4: oklch(0.72 0.16 70);
+  --chart-5: oklch(0.62 0.22 330);
+
+  --sidebar: oklch(0.98 0.004 270);
+  --sidebar-foreground: oklch(0.17 0.014 270);
+  --sidebar-primary: oklch(0.54 0.2 280);
+  --sidebar-primary-foreground: oklch(0.99 0.01 280);
+  --sidebar-accent: oklch(0.95 0.006 270);
+  --sidebar-accent-foreground: oklch(0.22 0.012 270);
+  --sidebar-border: oklch(0.9 0.006 270);
+  --sidebar-ring: oklch(0.54 0.2 280);
+}
+
+.dark {
+  --background: oklch(0.155 0.014 274);
+  --foreground: oklch(0.975 0.004 270);
+  --card: oklch(0.205 0.016 274);
+  --card-foreground: oklch(0.975 0.004 270);
+  --popover: oklch(0.2 0.016 274);
+  --popover-foreground: oklch(0.975 0.004 270);
+  --primary: oklch(0.68 0.18 282);
+  --primary-foreground: oklch(0.16 0.02 282);
+  --secondary: oklch(0.27 0.016 274);
+  --secondary-foreground: oklch(0.96 0.004 270);
+  --muted: oklch(0.25 0.014 274);
+  --muted-foreground: oklch(0.72 0.018 274);
+  --accent: oklch(0.32 0.03 282);
+  --accent-foreground: oklch(0.98 0.004 270);
+  --destructive: oklch(0.66 0.21 20);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.68 0.18 282);
+
+  --gain: oklch(0.76 0.17 160);
+  --gain-foreground: oklch(0.16 0.03 160);
+  --loss: oklch(0.68 0.2 18);
+  --loss-foreground: oklch(0.16 0.03 18);
+
+  --chart-1: oklch(0.7 0.18 282);
+  --chart-2: oklch(0.74 0.13 210);
+  --chart-3: oklch(0.76 0.17 160);
+  --chart-4: oklch(0.8 0.15 78);
+  --chart-5: oklch(0.74 0.19 330);
+
+  --sidebar: oklch(0.17 0.015 274);
+  --sidebar-foreground: oklch(0.96 0.004 270);
+  --sidebar-primary: oklch(0.7 0.18 282);
+  --sidebar-primary-foreground: oklch(0.16 0.02 282);
+  --sidebar-accent: oklch(0.26 0.016 274);
+  --sidebar-accent-foreground: oklch(0.96 0.004 270);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.7 0.18 282);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-gain: var(--gain);
+  --color-gain-foreground: var(--gain-foreground);
+  --color-loss: var(--loss);
+  --color-loss-foreground: var(--loss-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+  /* Ambient glow — only in dark, fixed so it doesn't scroll. */
+  .dark body {
+    background-image:
+      radial-gradient(58rem 40rem at 82% -12%, color-mix(in oklch, var(--primary) 18%, transparent), transparent 60%),
+      radial-gradient(46rem 34rem at -8% -6%, color-mix(in oklch, var(--chart-2) 12%, transparent), transparent 58%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  /* Faint command-center grid behind everything, fading toward the edges. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 4%, transparent) 1px, transparent 1px);
+    background-size: 46px 46px;
+    -webkit-mask-image: radial-gradient(125% 100% at 50% 0%, black, transparent 72%);
+    mask-image: radial-gradient(125% 100% at 50% 0%, black, transparent 72%);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Monospaced, tightly-tracked figures — the "terminal/fintech" numeral look. */
+  .nums {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+  /* Refined scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
+  }
+}
+
+@layer components {
+  /* Glassy elevated surface used by cards/panels. */
+  .surface {
+    @apply rounded-2xl border border-white/[0.07] bg-card/60 backdrop-blur-xl;
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklch, white 5%, transparent),
+      transparent 42%
+    );
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+      0 18px 40px -20px rgba(0, 0, 0, 0.7);
+  }
+  .surface-hover {
+    @apply transition-all duration-200;
+  }
+  .surface-hover:hover {
+    border-color: color-mix(in oklch, var(--primary) 35%, transparent);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+      0 22px 50px -22px color-mix(in oklch, var(--primary) 40%, black);
+    transform: translateY(-2px);
+  }
+  /* Thin gradient hairline along the top edge of a surface (accent cue). */
+  .accent-top {
+    position: relative;
+  }
+  .accent-top::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--accent-line, var(--primary)) 70%, transparent),
+      transparent
+    );
+  }
+  /* Live status dot with a soft pulsing halo. */
+  .live-dot {
+    position: relative;
+    display: inline-block;
+    height: 0.5rem;
+    width: 0.5rem;
+    border-radius: 9999px;
+    background: var(--gain);
+  }
+  .live-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--gain);
+    animation: live-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes live-ping {
+    0% {
+      transform: scale(1);
+      opacity: 0.65;
+    }
+    75%,
+    100% {
+      transform: scale(2.6);
+      opacity: 0;
+    }
+  }
+  /* Primary glow ring (hero / focal elements). */
+  .glow-primary {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent),
+      0 24px 60px -24px color-mix(in oklch, var(--primary) 55%, transparent);
+  }
+  /* Gradient text for hero numbers / brand. */
+  .text-gradient {
+    background: linear-gradient(
+      120deg,
+      var(--foreground),
+      color-mix(in oklch, var(--primary) 75%, var(--foreground))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-primary {
+    background: linear-gradient(120deg, var(--chart-2), var(--primary) 60%, var(--chart-5));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}

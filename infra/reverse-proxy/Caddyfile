@@ -1,0 +1,54 @@
+# ============================================================================
+#  Caddy reverse proxy for the dashboard — automatic HTTPS (Let's Encrypt).
+#
+#     sudo cp Caddyfile /etc/caddy/Caddyfile   # edit the site address first
+#     sudo systemctl reload caddy
+#
+#  NO personal domain needed. Pick ONE of the three blocks below and delete the
+#  others. The app needs HTTPS (the session cookie is `__Secure-`), and Let's
+#  Encrypt will NOT issue a cert for a bare IP — so use a free hostname.
+#
+#  Whichever you pick, set AUTH_URL in /etc/dashboard/dashboard.env to the same
+#  https URL (e.g. AUTH_URL=https://5-75-123-45.sslip.io).
+# ============================================================================
+
+# ── OPTION A — sslip.io (zero signup, instant) ──────────────────────────────
+# <your-server-ip-with-dashes>.sslip.io resolves to your IP automatically, and
+# Caddy gets a real Let's Encrypt cert for it. Replace with YOUR Hetzner IP.
+#   e.g. server IP 5.75.123.45  ->  5-75-123-45.sslip.io   (or 5.75.123.45.sslip.io)
+5-75-123-45.sslip.io {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000   # app binds localhost only; Postgres never exposed
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	log {
+		output file /var/log/caddy/dashboard.access.log
+	}
+}
+
+# ── OPTION B — DuckDNS (free, nicer/stable name) ────────────────────────────
+# Sign up at duckdns.org, create `yourname`, point it at your Hetzner IP, then:
+# yourname.duckdns.org {
+# 	encode zstd gzip
+# 	reverse_proxy 127.0.0.1:3000
+# 	header {
+# 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+# 		X-Frame-Options "DENY"
+# 		X-Content-Type-Options "nosniff"
+# 		Referrer-Policy "strict-origin-when-cross-origin"
+# 		-Server
+# 	}
+# }
+
+# ── OPTION C — bare IP, self-signed (no hostname at all) ────────────────────
+# Works, but every browser shows a "not secure" warning (you click through once).
+# Replace 5.75.123.45 with your IP. Set AUTH_URL=https://5.75.123.45
+# https://5.75.123.45 {
+# 	tls internal                 # Caddy's local CA — self-signed, no Let's Encrypt
+# 	reverse_proxy 127.0.0.1:3000
+# }

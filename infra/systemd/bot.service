@@ -1,0 +1,64 @@
+# ============================================================================
+#  systemd unit for the trading bot (Python/Alpaca engine).
+#
+#  Runs as a dedicated, unprivileged `bot` user — SEPARATE from the dashboard
+#  user. ONLY this user can read the bot's .env (Alpaca keys) and it connects to
+#  Postgres as the read-WRITE bot owner role. The dashboard can never see these
+#  secrets.
+#
+#  One-time setup on the VPS:
+#     sudo useradd --system --create-home --shell /usr/sbin/nologin bot
+#     sudo mkdir -p /opt/bot /etc/bot
+#     # rsync the apps/bot/ tree into /opt/bot (code + .venv), then:
+#     sudo chown -R bot:bot /opt/bot
+#     sudo install -o bot -g bot -m 0600 bot.env /etc/bot/bot.env
+#     sudo cp bot.service /etc/systemd/system/
+#     sudo systemctl daemon-reload && sudo systemctl enable --now bot
+#
+#  Layout expected in /opt/bot:  main.py, config.py, engine/, .venv/, ...
+# ============================================================================
+[Unit]
+Description=Algo Trading Bot (Alpaca engine)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bot
+Group=bot
+WorkingDirectory=/opt/bot
+# Root-relative imports (`from config import settings`) require running from the
+# bot dir with its own venv interpreter.
+ExecStart=/opt/bot/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=10
+
+Environment=PYTHONUNBUFFERED=1
+# Secrets (ALPACA_*, DATABASE_URL=bot owner, DRY_RUN, trailing knobs) live here,
+# readable only by the bot user (0600). NEVER the dashboard's env.
+EnvironmentFile=/etc/bot/bot.env
+
+# ── Sandboxing / hardening ───────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# The bot writes nothing to disk (state lives in Postgres); logs go to journald.
+# If you add file logging, grant: ReadWritePaths=/opt/bot/logs
+
+[Install]
+WantedBy=multi-user.target

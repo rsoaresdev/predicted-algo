@@ -1,0 +1,7 @@
+# Core engine dependencies
+alpaca-py>=0.33                # official modern Alpaca SDK (trading + market data)
+pandas>=2.0
+numpy>=1.24
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9           # PostgreSQL driver
+python-dotenv>=1.0

@@ -1,0 +1,38 @@
+# ============================================================================
+#  Local development PostgreSQL for the dashboard.
+#
+#  Brings up an isolated Postgres 18 (native uuidv7) seeded with the bot schema
+#  and the read-only `dashboard_ro` role. Host port 5433 avoids clashing with a
+#  Postgres already running on 5432.
+#
+#      docker compose -f infra/docker-compose.dev.yml up -d
+#      # then seed:  cd apps/dashboard && npm run seed
+#
+#  The dashboard connects as dashboard_ro:
+#      DATABASE_URL=postgres://dashboard_ro:devpassword@localhost:5433/predicted
+# ============================================================================
+services:
+  db:
+    image: postgres:18
+    container_name: predicted_dashboard_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: predicted
+    ports:
+      - "127.0.0.1:5433:5432"   # bind to localhost only — never expose Postgres publicly
+    volumes:
+      - predicted_dashboard_pgdata:/var/lib/postgresql/data
+      # Init scripts run alphabetically, as the postgres superuser/owner, on a
+      # fresh data volume. 01 sets read-only default privileges, 02 creates the
+      # schema (whose tables then inherit the SELECT grant).
+      - ./postgres/01_dashboard_readonly_role.sql:/docker-entrypoint-initdb.d/01_role.sql:ro
+      - ./postgres/02_schema.sql:/docker-entrypoint-initdb.d/02_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d predicted"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  predicted_dashboard_pgdata:

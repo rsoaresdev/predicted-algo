@@ -1,0 +1,32 @@
+# ── Secrets ─────────────────────────────────────────────────────────────────
+.env
+*.env
+!*.env.example
+!.env.example
+
+# ── Python (apps/bot) ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ── Node / Next.js (apps/dashboard) ─────────────────────────────────────────
+node_modules/
+.npm-cache/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Build artifacts / local data ────────────────────────────────────────────
+dist/
+*.log
+logs/
+.DS_Store
+
+# ── Local dashboard auth/dev scratch ────────────────────────────────────────
+.env.local
+.env.*.local
