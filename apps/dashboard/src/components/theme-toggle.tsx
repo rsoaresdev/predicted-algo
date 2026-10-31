@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const subscribe = () => () => {};
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // False while rendering on the server, true in the browser, so the icon
+  // never disagrees with the server markup during hydration.
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
 
   const isDark = resolvedTheme === "dark";
   return (
