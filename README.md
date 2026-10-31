@@ -1,122 +1,100 @@
-# predicted-algo — monorepo
+# predicted-algo
 
-Algorithmic trading bot (Python/Alpaca) **and** a private, read-only web
-dashboard for its performance history. Two apps, clear boundaries, separate OS
-users and database roles.
+An algorithmic trading bot for US ETFs (Python and Alpaca) and a private, read-only web dashboard for its performance history. The two apps run as separate processes, under separate Linux users and with separate database roles.
 
 ```
 predicted-algo/
 ├── apps/
-│   ├── bot/          # the existing Python bot (engine, risk, strategies,
-│   │                 #   backtester, database/*) — moved here unchanged
-│   └── dashboard/    # Next.js 16 read-only dashboard (this addition)
+│   ├── bot/          # Python trading engine: strategies, risk, backtester, database
+│   └── dashboard/    # Next.js read-only performance dashboard
 ├── infra/
-│   ├── postgres/     # 01 read-only role · 02 schema · (seed lives in dashboard)
+│   ├── postgres/     # read-only role and schema
 │   ├── docker-compose.dev.yml
-│   ├── systemd/dashboard.service
+│   ├── systemd/      # bot and dashboard services
 │   └── reverse-proxy/{Caddyfile,nginx.conf}
 └── .github/workflows/dashboard-ci.yml
 ```
 
 ## Why this structure
 
-- **Two top-level apps, no Turborepo/Nx.** There is exactly one JS app and one
-  Python app, and they share **no** JS code. A JS monorepo orchestrator would add
-  tooling for zero benefit. A flat `apps/` + `infra/` layout gives the boundaries
-  that actually matter: separate processes, separate Linux users, separate DB
-  roles.
-- **The bot moved verbatim into `apps/bot`.** Its imports are root-relative
-  (`from config import settings`), so running from `apps/bot/` keeps everything
-  working — no code changes. The production copy on the VPS is unaffected (it's a
-  different machine). A pre-move backup tarball was created next to the repo.
-- The repo is **not** under git. If you want history/undo going forward:
-  `git init && git add -A && git commit -m "monorepo baseline"`.
+- **Two apps, no monorepo tooling.** There is one Python app and one JavaScript app, and they share no code, so Turborepo or Nx would add tooling for nothing. A flat `apps/` and `infra/` layout gives the boundaries that matter: separate processes, Linux users and database roles.
+- **The bot runs from its own folder.** Its imports are relative to `apps/bot` (`from config import settings`), so it is started from there.
 
-## The bot (`apps/bot`) — unchanged
+## The bot (`apps/bot`)
+
+The strategies, risk rules and backtest results are in [`apps/bot/README.md`](apps/bot/README.md).
 
 ```bash
 cd apps/bot
-./.venv/bin/python -m unittest discover -s tests   # 28 tests pass
+./.venv/bin/python -m unittest discover -s tests
 ./.venv/bin/python main.py
 ```
 
 ## The dashboard (`apps/dashboard`)
 
-### Stack (current stable, June 2026)
+### Stack
 
 | Concern | Choice | Notes |
-|---|---|---|
-| Framework | **Next.js 16.2** (App Router, Turbopack, React 19) | latest stable |
-| Styling | **Tailwind CSS v4** | intentional dark palette, semantic gain/loss |
-| UI | **shadcn/ui**-style components (Radix) | hand-authored, lean deps |
-| Charts | **Recharts 3** | single charting layer |
-| Tables | **TanStack Table 8** | server-driven filter/sort/pagination |
-| Data | **Drizzle ORM 0.45** + postgres.js | read-only typed SELECTs, no migrations |
-| Auth | **Auth.js v5** (Credentials + JWT) + **otplib** TOTP + **bcryptjs** | env-based, zero DB writes |
-| Validation | **zod 4** | Server Action inputs |
+| --- | --- | --- |
+| Framework | Next.js 16 (App Router, Turbopack, React 19) | |
+| Styling | Tailwind CSS v4 | Dark palette with semantic gain and loss colours |
+| UI | shadcn/ui-style components on Radix | Hand-written, few dependencies |
+| Charts | Recharts 3 | |
+| Tables | TanStack Table 8 | Server-side filtering, sorting and pagination |
+| Data | Drizzle ORM and postgres.js | Typed read-only queries, no migrations |
+| Auth | Auth.js v5 (credentials and JWT), otplib TOTP, bcryptjs | Configured from the environment, no database writes |
+| Validation | Zod 4 | Server Action inputs |
 
-Auth.js was chosen over Better Auth because the spec maps to it 1:1 and a single
-hard-coded admin needs no user/session tables — keeping the bot DB strictly
-read-only. Secrets live in env, the TOTP secret AES-256-GCM-encrypted at rest.
+Auth.js fits a single hard-coded admin without user or session tables, which keeps the bot's database strictly read-only. Secrets live in the environment, and the TOTP secret is encrypted at rest with AES-256-GCM.
 
 ### Local development
 
-Requires Node 20+ and a Postgres 18 (native `uuidv7()`).
+Requires Node 20 or later and Postgres 18 (for the native `uuidv7()`).
+
+Start Postgres with Docker, on port 5433:
 
 ```bash
-# Option A — Docker (portable)
-docker compose -f infra/docker-compose.dev.yml up -d   # Postgres on :5433
-
-# Option B — an existing local Postgres: create an isolated dev DB, apply schema,
-# create the read-only role (see infra/postgres/*.sql).
-
-cd apps/dashboard
-npm install
-npm run seed          # SEED_DATABASE_URL must point at a WRITABLE role
-npm run setup:admin   # prints AUTH_*/ADMIN_*/TOTP_* + a QR — paste into .env.local
-npm run dev           # http://localhost:3000  (everything redirects to /login)
+docker compose -f infra/docker-compose.dev.yml up -d
 ```
 
-`.env.local` (dev) / `.env.example` (template) document every variable.
-`DATABASE_URL` must use the **read-only** `dashboard_ro` role.
+Or use an existing local Postgres: create a separate development database, apply the schema and create the read-only role from `infra/postgres/*.sql`.
 
-### Production deploy (never build on the VPS)
+Then:
 
-1. **Build in CI** (`.github/workflows/dashboard-ci.yml`): typecheck → lint →
-   `next build` (standalone) → upload `dashboard-standalone.tgz`.
-2. **Ship the artifact** to the VPS and unpack into `/opt/dashboard`
-   (`server.js`, `.next/`, `node_modules/`, `public/`).
-3. **Run via systemd** (`infra/systemd/dashboard.service`) as the dedicated
-   `dashboard` user — localhost-bound, hardened, env from
-   `/etc/dashboard/dashboard.env` (0600). No access to the bot's `.env`.
-4. **Reverse proxy** with Caddy (auto-TLS) or Nginx + certbot
-   (`infra/reverse-proxy/`). Postgres stays on localhost — never exposed.
+```bash
+cd apps/dashboard
+npm install
+npm run seed          # SEED_DATABASE_URL must point at a role that can write
+npm run setup:admin   # prints the AUTH_*, ADMIN_* and TOTP_* values and a QR code for .env.local
+npm run dev           # http://localhost:3000, every page redirects to /login
+```
 
-**Hosting on Hetzner Cloud without a personal domain:** no app code changes are
-needed (the app is host-agnostic, `trustHost: true`). HTTPS is required (the
-session cookie is `__Secure-`), and Let's Encrypt won't issue for a bare IP, so
-use a **free hostname**: `<ip-with-dashes>.sslip.io` (instant, zero signup) or a
-free `yourname.duckdns.org`. Point the Caddyfile site address + `AUTH_URL` at it
-and Caddy fetches the cert automatically. Open only ports 80/443 (+22) in the
-Hetzner Cloud Firewall; leave Postgres on localhost. (Bare-IP self-signed TLS via
-`tls internal` also works but shows a browser warning — see the Caddyfile.)
+`.env.example` documents every variable. `DATABASE_URL` must use the read-only `dashboard_ro` role.
+
+### Production deploy
+
+The dashboard is never built on the server.
+
+1. **Build in CI** (`.github/workflows/dashboard-ci.yml`): typecheck, lint, `next build` in standalone mode, then upload `dashboard-standalone.tgz`.
+2. **Copy the artifact** to the server and unpack it into `/opt/dashboard` (`server.js`, `.next/`, `node_modules/`, `public/`).
+3. **Run it with systemd** (`infra/systemd/dashboard.service`) as the dedicated `dashboard` user, bound to localhost and hardened, with its environment in `/etc/dashboard/dashboard.env` (mode 0600). It has no access to the bot's `.env`.
+4. **Put a reverse proxy in front**: Caddy with automatic TLS, or Nginx with certbot (`infra/reverse-proxy/`). Postgres stays on localhost and is never exposed.
+
+**Without a domain of your own:** the app does not depend on the host name (`trustHost: true`), but HTTPS is required because the session cookie uses the `__Secure-` prefix, and Let's Encrypt does not issue certificates for a bare IP. Use a free host name such as `<ip-with-dashes>.sslip.io` (no sign-up) or `yourname.duckdns.org`, point the Caddyfile and `AUTH_URL` at it, and Caddy fetches the certificate. Open only ports 80, 443 and 22 in the firewall. A self-signed certificate with `tls internal` also works, with a browser warning (see the Caddyfile).
+
+The full server setup is in [`infra/DEPLOY_HETZNER.md`](infra/DEPLOY_HETZNER.md).
 
 ## Security model
 
-- **Read-only DB role** `dashboard_ro` — `SELECT` only, writes revoked at the DB
-  level (`infra/postgres/01_dashboard_readonly_role.sql`).
-- **Global auth gate** — `proxy.ts` (Next 16's renamed middleware) redirects every
-  route except `/login` (and `/api/auth/*`) to login; each Server Action re-checks
-  the session.
-- **2FA** — password (bcrypt) **and** TOTP required; session is a `httpOnly`,
-  `secure`, `sameSite=strict` JWT cookie. No public registration.
-- **Process isolation** — dashboard runs as its own Linux user with no Alpaca
-  credentials and no DB write access.
+- **Read-only database role.** `dashboard_ro` can only `SELECT`; writes are revoked in the database (`infra/postgres/01_dashboard_readonly_role.sql`).
+- **One login gate for every page.** `proxy.ts` (the Next.js 16 middleware) redirects every route except `/login` and `/api/auth/*` to the login page, and each Server Action checks the session again.
+- **Two-factor sign-in.** A bcrypt password and a TOTP code are both required. The session is an `httpOnly`, `secure`, `sameSite=strict` JWT cookie, and there is no public sign-up.
+- **Process isolation.** The dashboard runs as its own Linux user, with no Alpaca credentials and no write access to the database.
 
 ## Metric parity
 
-Sharpe, max drawdown, profit factor, CAGR, win rate are computed in TypeScript
-(`apps/dashboard/src/lib/metrics.ts`) with the **same formulas** as
-`apps/bot/backtester.py` (sample std, `√252` annualization, `equity/cummax−1`,
-gross-profit/gross-loss). The equity curve comes from `daily_metrics.ending_equity`;
-all trade-level aggregates are recomputed from raw `trades` rows.
+Sharpe ratio, maximum drawdown, profit factor, CAGR and win rate are computed in TypeScript (`apps/dashboard/src/lib/metrics.ts`) with the same formulas as `apps/bot/backtester.py`: sample standard deviation, `√252` annualisation, `equity / cummax − 1`, and gross profit over gross loss. The equity curve comes from `daily_metrics.ending_equity`, and every trade-level figure is recomputed from the raw `trades` rows.
+
+## License
+
+[MIT](LICENSE)
