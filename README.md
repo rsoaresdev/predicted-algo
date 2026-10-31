@@ -49,7 +49,7 @@ Auth.js fits a single hard-coded admin without user or session tables, which kee
 
 ### Local development
 
-Requires Node 20 or later and Postgres 18 (for the native `uuidv7()`).
+Requires Node 20 or later, [Bun](https://bun.sh) and Postgres 18 (for the native `uuidv7()`).
 
 Start Postgres with Docker, on port 5433:
 
@@ -63,10 +63,10 @@ Then:
 
 ```bash
 cd apps/dashboard
-npm install
-npm run seed          # SEED_DATABASE_URL must point at a role that can write
-npm run setup:admin   # prints the AUTH_*, ADMIN_* and TOTP_* values and a QR code for .env.local
-npm run dev           # http://localhost:3000, every page redirects to /login
+bun install
+bun run seed          # SEED_DATABASE_URL must point at a role that can write
+bun run setup:admin   # prints the AUTH_*, ADMIN_* and TOTP_* values and a QR code for .env.local
+bun run dev           # http://localhost:3000, every page redirects to /login
 ```
 
 `.env.example` documents every variable. `DATABASE_URL` must use the read-only `dashboard_ro` role.
